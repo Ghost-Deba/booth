@@ -1,6 +1,12 @@
 import discord
 from discord import app_commands
 import requests
+import os
+from dotenv import load_dotenv  # استيراد dotenv
+
+# تحميل المتغيرات من ملف .env
+load_dotenv()
+DISCORD_TOKEN = os.getenv('DISCORD_TOKEN')
 
 # تعريف البوت
 intents = discord.Intents.default()
@@ -11,31 +17,25 @@ tree = app_commands.CommandTree(client)
 
 # استبدال القيم في الـ API بالاسم الجديد
 def transform_data(data, item_name):
-    # نبحث عن العنصر المحدد (item_name) من البيانات
     transformed_data = []
-
     for item in data:
-        # تأكد من أن العنصر الذي تم جلبه يتوافق مع اسم العنصر
         if item.get('id') == item_name:
             name = item.get('id', 'Unknown Name')
             class_name = item.get('category', 'Unknown Class')
             value = item.get('value', 0)
-
             transformed_data.append({
                 "Item": name,
                 "MaxPrice": value,
                 "Class": class_name
             })
-
     return transformed_data
 
 # جلب البيانات من الـ API
 def fetch_data_from_api():
-    api_url = 'https://biggamesapi.io/api/rap'  # حط رابط الـ API هنا
+    api_url = 'https://biggamesapi.io/api/rap'
     response = requests.get(api_url)
-
     if response.status_code == 200:
-        return response.json()  # بيانات الـ JSON من الـ API
+        return response.json()
     else:
         return []
 
@@ -46,10 +46,8 @@ def generate_message(transformed_data):
 _G.ZapHubBoothsSniperSettings = {
 MinimumGems = 0,
 Items = {'''
-    
     for item in transformed_data:
         message += f'\n{{Item = "{item["Item"]}", MaxPrice = {item["MaxPrice"]}, Class = "{item["Class"]}"}},'
-
     message += '''
 },
 Extras = {
@@ -72,23 +70,22 @@ loadstring(game:HttpGet('https://zaphub.xyz/ExecBoothSniper'))()
 
 # إضافة Slash Command للبوت
 @tree.command(name="get", description="جلب بيانات عنصر معين من الـ API")
-@app_commands.describe(item="اسم العنصر الذي ترغب في جلب بياناته")  # إضافة وصف للـ parameter
+@app_commands.describe(item="اسم العنصر الذي ترغب في جلب بياناته")
 async def get_data(interaction: discord.Interaction, item: str):
-    await interaction.response.defer()  # تأجيل الرد لإعطاء الوقت لتنفيذ الكود
-    data = fetch_data_from_api()  # جلب البيانات من الـ API
-    transformed_data = transform_data(data, item)  # تحويل البيانات بناءً على اسم العنصر
+    await interaction.response.defer()
+    data = fetch_data_from_api()
+    transformed_data = transform_data(data, item)
     if transformed_data:
-        final_message = generate_message(transformed_data)  # توليد الرسالة
-        await interaction.followup.send(final_message)  # إرسال الرسالة إلى القناة
+        final_message = generate_message(transformed_data)
+        await interaction.followup.send(final_message)
     else:
         await interaction.followup.send(f"لم يتم العثور على بيانات للعنصر '{item}'.")
 
 # عند تشغيل البوت
 @client.event
 async def on_ready():
-    # نشر Slash Commands
     await tree.sync()
     print(f'We have logged in as {client.user}')
 
-# استبدل 'YOUR_BOT_TOKEN' بالتوكن الخاص بك
-client.run('MTMwNzQwMzE1ODk1MTE2NjAxNA.GHm8fI.CneTEpfDSGzsXt44WDumZHaKhAs2HOspyrCz0M')
+# تشغيل البوت
+client.run(DISCORD_TOKEN)
